@@ -54,8 +54,8 @@
       <file leaf-file-name="core.cljs" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/zeronine/core.cljs">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.37406856">
-              <caret line="58" column="35" selection-start-line="58" selection-start-column="35" selection-end-line="58" selection-end-column="35" />
+            <state vertical-scroll-proportion="0.2347243">
+              <caret line="15" column="40" selection-start-line="15" selection-start-column="40" selection-end-line="15" selection-end-column="40" />
               <folding />
             </state>
           </provider>
@@ -460,8 +460,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/zeronine/core.cljs">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.37406856">
-          <caret line="58" column="35" selection-start-line="58" selection-start-column="35" selection-end-line="58" selection-end-column="35" />
+        <state vertical-scroll-proportion="0.2347243">
+          <caret line="15" column="40" selection-start-line="15" selection-start-column="40" selection-end-line="15" selection-end-column="40" />
           <folding />
         </state>
       </provider>

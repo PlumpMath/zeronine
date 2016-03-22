@@ -13,63 +13,72 @@
 (defn fps-to-millis [fps]
   (/ 1000 fps))
 
-(def time-loop-interval (fps-to-millis 10))
+(def time-loop-interval (fps-to-millis 20))
 
-(def wrapping true)
+(def wrapping false)
 
-(defonce app-state (atom {:text "Hello world!"
-                          :steps     [ "zero"  "one"   "two"    "three"   "four"   "five"     "six"     "seven"   "eight"   "nine"]
-                          :positions [[[0 0 0] [0 0 1] [-1 0 1] [-1 -1 1] [-1 -1 1] [-1 -1 1] [-2 -2 1] [-2 -2 1] [-2 -2 1] [-2 -2 1]]
-                                      [nil     [0 0 0] [1 0 1]  [1 -1 1]  [1 -1 1]  [1 -1 1]  [2 -2 1]  [2 -2 1]  [2 -2 1]  [2 -2 1]]
-                                      [nil     nil     [1 0 0]  [0 1 1]   [1 1 1]   [1 1 1]   [2 2 1]   [2 2 1]   [2 2 1]   [2 2 1]]
-                                      [nil     nil     nil      [0 1 0]   [-1 1 1]  [-1 1 1]  [-2 2 1]  [-2 2 1]  [-2 2 1]  [-2 2 1]]
-                                      [nil     nil     nil      nil       [0 0 0]   [0 0 1]   [-1 0 1]  [-1 -1 1] [-1 -1 1] [-1 -1 1]]
-                                      [nil     nil     nil      nil       nil       [0 0 0]   [1 0 1]   [1 -1 1]  [1 -1 1]  [1 -1 1]]
-                                      [nil     nil     nil      nil       nil       nil       [1 0 0]   [0 1 1]   [1 1 1]   [1 1 1]]
-                                      [nil     nil     nil      nil       nil       nil       nil       [0 1 0]   [-1 1 1]  [-1 1 1]]
-                                      [nil     nil     nil      nil       nil       nil       nil       nil       [0 0 0]   [0 0 1]]]
-                          ;:step-sequence [0 1 2 3 4 5 6 7 8 9]
-                          :step-sequence [0 1 2 3 4 5 6 7 8 9 8 7 6 5 4 3 2 1]
-                          :step-index 0
+;                    0       1       2        3         4         5         6         7         8         9
+;                    nil     solo    duo      triad     quad      pent      hex       sept      oct       non
+(def key-positions [[[0 0 0] [0 0 1] [-1 0 1] [-1 -1 1] [-1 -1 1] [-1 -1 1] [-2 -2 1] [-2 -2 1] [-2 -2 1] [-2 -2 1]]
+                    [nil     [0 0 0] [1 0 1]  [1 -1 1]  [1 -1 1]  [1 -1 1]  [2 -2 1]  [2 -2 1]  [2 -2 1]  [2 -2 1]]
+                    [nil     nil     [1 0 0]  [0 1 1]   [1 1 1]   [1 1 1]   [2 2 1]   [2 2 1]   [2 2 1]   [2 2 1]]
+                    [nil     nil     nil      [0 1 0]   [-1 1 1]  [-1 1 1]  [-2 2 1]  [-2 2 1]  [-2 2 1]  [-2 2 1]]
+                    [nil     nil     nil      nil       [0 0 0]   [0 0 1]   [-1 0 1]  [-1 -1 1] [-1 -1 1] [-1 -1 1]]
+                    [nil     nil     nil      nil       nil       [0 0 0]   [1 0 1]   [1 -1 1]  [1 -1 1]  [1 -1 1]]
+                    [nil     nil     nil      nil       nil       nil       [1 0 0]   [0 1 1]   [1 1 1]   [1 1 1]]
+                    [nil     nil     nil      nil       nil       nil       nil       [0 1 0]   [-1 1 1]  [-1 1 1]]
+                    [nil     nil     nil      nil       nil       nil       nil       nil       [0 0 0]   [0 0 1]]])
+
+(def step-sequence  [0 1 2 3 4 5 6 7 8 9])
+;(def step-sequence  [0 1 2 3 4 5 6 7 8 9 8 7 6 5 4 3 2 1])
+
+(defonce app-state (atom {:step-index 0
                           :running true}))
 
 (defn dot [index dot-position]
   (let [[x y a] dot-position]
     (if dot-position
-      [:div {:key     index
-             :style   {:position "absolute"
-                       :left (* x spacing-x)
-                       :top (* y spacing-y)
-                       :opacity a
-                       }
-             :onClick (fn [e]
-                        (.preventDefault e)
-                        (.stopPropagation e)
-                        (println (str "dot click " dot-position)))}
+      [:div {:key index
+             :style {:position "absolute"
+                     :width 0
+                     :height 0
+                     :left (* x spacing-x)
+                     :top (* y spacing-y)
+                     :opacity a}
+             }
        [:div {:style {:position "relative"
                       :top (- (/ spacing-y 2))
                       :left (- (/ spacing-x 2))
                       :width dot-size
                       :height dot-size
-                      :background-color "white"
+                      :background-color "#fff"
                       :display "flex"
                       :justify-content "center"
                       :alignItems "center"
                       :font-size 30
-                      :color "black"
+                      :color "white"
                       :font-family "\"Lucida Console\", Monaco, monospace"
-                      :border-radius dot-size}}
-        (inc index)]])))
+                      :border-style "solid"
+                      :border-width 8
+                      :border-color "rgba(0, 0, 0, 0.1)"
+                      :border-radius dot-size
+                      :box-shadow "0px 5px 20px rgba(0, 0, 0, 0.03)"}
+               :onClick (fn [e]
+                          (.preventDefault e)
+                          (.stopPropagation e)
+                          (println (str "dot click " dot-position)))}
+        (inc index)
+        ]])))
 
 (defn app []
-  (let [{:keys [step-index step-sequence positions]} @app-state
+  (let [{:keys [step-index]} @app-state
         position-index (get step-sequence step-index)
-        current-dot-positions (map (fn [dot] (get dot position-index)) positions)
+        current-dot-positions (map (fn [dot] (get dot position-index)) key-positions)
         dot-divs (map-indexed dot current-dot-positions)]
     [:div {:style {:position "relative"
                    :width (.-innerWidth js/window)
                    :height (.-innerHeight js/window)
-                   :background-color "black"}
+                   :background-color "#ececec"}
            :onClick (fn [e] (println "bg click"))}
      [:div {:style {:position "relative"
                     :height 0
@@ -83,7 +92,7 @@
 
 (defn move-step-index [amount-to-move]
   (swap! app-state
-         (fn [{:keys [step-index step-sequence] :as state}]
+         (fn [{:keys [step-index] :as state}]
            (let [last-step-index (- (count step-sequence) 1)
                  new-step-index (+ step-index amount-to-move)
                  step-index-for-swap (cond
