@@ -1,8 +1,23 @@
+
+
+
+
+
+
+
 (ns zeronine.core
   (:require [reagent.core :as r :refer [atom]]
             [cljs.core.async :refer [<! chan sliding-buffer put! close! timeout]])
   (:require-macros
     [cljs.core.async.macros :refer [go-loop go]]))
+
+(comment
+
+  hellooooo
+  I am a comment and I'm soooo lovely
+
+  )
+
 
 (enable-console-print!)
 
@@ -56,7 +71,8 @@
                       :justify-content "center"
                       :alignItems "center"
                       :font-size 30
-                      :color "white"
+                      ;:color "white"
+                      :color "rgba(0, 0, 0, 0.2)"
                       :font-family "\"Lucida Console\", Monaco, monospace"
                       :border-style "solid"
                       :border-width 8
@@ -70,6 +86,13 @@
         (inc index)
         ]])))
 
+(defn on-mouse-down [e]
+  (def wrapping true)
+  (println "mouse down"))
+(defn on-mouse-up [e]
+  (def wrapping false)
+  (println "mouse up"))
+
 (defn app []
   (let [{:keys [step-index]} @app-state
         position-index (get step-sequence step-index)
@@ -79,7 +102,10 @@
                    :width (.-innerWidth js/window)
                    :height (.-innerHeight js/window)
                    :background-color "#ececec"}
-           :onClick (fn [e] (println "bg click"))}
+           :onClick (fn [e] (println "bg click"))
+           :onMouseDown on-mouse-down
+           :onMouseUp on-mouse-up
+           }
      [:div {:style {:position "relative"
                     :height 0
                     :width 0
