@@ -52,6 +52,7 @@
                           :current-positions [nil     nil     nil     nil     nil     nil     nil     nil     nil]
                           :force             [[0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0]]
                           :wrapping false
+                          :blorg 0
                           }))
 
 (defn dot [index dot-position]
@@ -105,13 +106,15 @@
   (let [{:keys [current-positions]} @app-state
         dot-divs (map-indexed dot current-positions)
         ]
-    [:div {:style {:position "relative"
-                   :width (.-innerWidth js/window)
-                   :height (.-innerHeight js/window)
-                   :background-color "#ececec"}
-           :onClick (fn [e] (println "bg click"))
+    [:div {:style       {:position         "relative"
+                         :width            (.-innerWidth js/window)
+                         :height           (.-innerHeight js/window)
+                         :background-color "#ececec"}
+           :onClick     (fn [e]
+
+                          (println (str "state: " @app-state)))
            :onMouseDown on-mouse-down
-           :onMouseUp on-mouse-up
+           :onMouseUp   on-mouse-up
            }
      [:div {:style {:position "relative"
                     :height 0
@@ -135,7 +138,6 @@
                                        :else new-step-index)
                  position-index (get step-sequence step-index-for-swap)
                  ]
-             (println (str "step index: " step-index-for-swap))
              (-> state
                  (assoc :step-index step-index-for-swap)
                  (assoc :position-index position-index)
@@ -169,12 +171,37 @@
   ;(set! (.-onclick js/document) on-click)
   )
 
+(defn jitter-amount []
+  (* (- (rand) (rand)) 0.01))
+
+(defn jitter-position [[x y a :as position]]
+  ;(println position)
+  ;(if (= position nil)
+  ;  nil
+  ;  [(+ x (jitter-amount)) (+ y (jitter-amount)) (+ a (jitter-amount))])
+  (if-not (nil? position)
+    [(+ x (jitter-amount)) (+ y (jitter-amount)) (+ a (jitter-amount))]
+    position
+    )
+
+  )
+
+(defn step-world [app-state]
+  ;(println "stepping world")
+  (swap! app-state (fn [{:keys [blorg current-positions] :as state}]
+                     (-> state
+                         (assoc :current-positions (map jitter-position current-positions))
+                         (assoc :blorg (inc blorg))
+                         ))))
+
 (defn time-loop []
   (go
     (<! (timeout time-loop-interval))
     (when (:running @app-state)
-      (move-step-index 1)
-      (println "tick"))
+      ;(move-step-index 1)
+      (step-world app-state)
+      ;(println "tick")
+      )
     (time-loop)))
 
 (defonce init
