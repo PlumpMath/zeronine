@@ -30,7 +30,7 @@
 
 (def time-loop-interval (fps-to-millis 20))
 
-(def wrapping false)
+
 
 ;                    0       1       2        3         4         5         6         7         8         9
 ;                    nil     solo    duo      triad     quad      pent      hex       sept      oct       non
@@ -48,7 +48,11 @@
 ;(def step-sequence  [0 1 2 3 4 5 6 7 8 9 8 7 6 5 4 3 2 1])
 
 (defonce app-state (atom {:step-index 0
-                          :running true}))
+                          :running true
+                          :current-positions [nil     nil     nil     nil     nil     nil     nil     nil     nil]
+                          :force             [[0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0]]
+                          :wrapping false
+                          }))
 
 (defn dot [index dot-position]
   (let [[x y a] dot-position]
@@ -83,21 +87,24 @@
                           (.preventDefault e)
                           (.stopPropagation e)
                           (println (str "dot click " dot-position)))}
-        (inc index)
-        ]])))
+        (inc index)]])))
+
+(defn set-wrapping-2 [is-wrapping]
+  (swap! app-state (fn [state]
+                     (assoc state :wrapping is-wrapping))))
 
 (defn on-mouse-down [e]
-  (def wrapping true)
+  (set-wrapping-2 true)
   (println "mouse down"))
+
 (defn on-mouse-up [e]
-  (def wrapping false)
+  (set-wrapping-2 false)
   (println "mouse up"))
 
 (defn app []
-  (let [{:keys [step-index]} @app-state
-        position-index (get step-sequence step-index)
-        current-dot-positions (map (fn [dot] (get dot position-index)) key-positions)
-        dot-divs (map-indexed dot current-dot-positions)]
+  (let [{:keys [current-positions]} @app-state
+        dot-divs (map-indexed dot current-positions)
+        ]
     [:div {:style {:position "relative"
                    :width (.-innerWidth js/window)
                    :height (.-innerHeight js/window)
@@ -111,22 +118,28 @@
                     :width 0
                     :left (/ (.-innerWidth js/window) 2)
                     :top (/ (.-innerHeight js/window) 2)}}
-      dot-divs]]
-    ))
+      dot-divs]]))
 
 (r/render-component [app] (. js/document (getElementById "app")))
 
+
+
 (defn move-step-index [amount-to-move]
   (swap! app-state
-         (fn [{:keys [step-index] :as state}]
+         (fn [{:keys [step-index wrapping] :as state}]
            (let [last-step-index (- (count step-sequence) 1)
                  new-step-index (+ step-index amount-to-move)
                  step-index-for-swap (cond
                                        (< new-step-index 0) (if wrapping last-step-index 0)
                                        (> new-step-index last-step-index) (if wrapping 0 last-step-index)
-                                       :else new-step-index)]
+                                       :else new-step-index)
+                 position-index (get step-sequence step-index-for-swap)
+                 ]
+             (println (str "step index: " step-index-for-swap))
              (-> state
-                 (assoc :step-index step-index-for-swap))))))
+                 (assoc :step-index step-index-for-swap)
+                 (assoc :position-index position-index)
+                 (assoc :current-positions (map (fn [dot] (get dot position-index)) key-positions)))))))
 
 (defn toggle-running []
   (swap! app-state
@@ -134,10 +147,10 @@
            (-> state
                (assoc :running (not (:running state)))))))
 
-(defn on-click [e]
-  ;(println (str "step index: " (:step-index @app-state)))
-  (let [{:keys [steps step-index step-sequence positions]} @app-state]
-    (println "clicffk")))
+;(defn on-click [e]
+;  ;(println (str "step index: " (:step-index @app-state)))
+;  (let [{:keys [steps step-index step-sequence positions]} @app-state]
+;    (println "clicffk")))
 
 (defn on-key-down [e]
   (let [keyCode (.-keyCode e)]
