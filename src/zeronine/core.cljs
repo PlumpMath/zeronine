@@ -1,10 +1,3 @@
-
-
-
-
-
-
-
 (ns zeronine.core
   (:require [reagent.core :as r :refer [atom]]
             [cljs.core.async :refer [<! chan sliding-buffer put! close! timeout]])
@@ -30,8 +23,6 @@
 
 (def time-loop-interval (fps-to-millis 20))
 
-
-
 ;                    0       1       2        3         4         5         6         7         8         9
 ;                    nil     solo    duo      triad     quad      pent      hex       sept      oct       non
 (def key-positions [[[0 0 0] [0 0 1] [-1 0 1] [-1 -1 1] [-1 -1 1] [-1 -1 1] [-2 -2 1] [-2 -2 1] [-2 -2 1] [-2 -2 1]]
@@ -47,12 +38,29 @@
 (def step-sequence  [0 1 2 3 4 5 6 7 8 9])
 ;(def step-sequence  [0 1 2 3 4 5 6 7 8 9 8 7 6 5 4 3 2 1])
 
-(defonce app-state (atom {:step-index 0
-                          :running true
-                          :current-positions [nil     nil     nil     nil     nil     nil     nil     nil     nil]
+
+
+
+(defn make-trackable []
+  {:target  0
+   :force   0
+   :current 0})
+
+(defn make-tracking-dot []
+  (assoc {} :x (make-trackable)
+            :y (make-trackable)
+            :a (make-trackable)))
+
+
+
+(defonce app-state (atom {:step-index        0
+                          :running           true
+                          :target-positions  [nil nil nil nil nil nil nil nil nil]
+                          :current-positions [nil nil nil nil nil nil nil nil nil]
                           :force             [[0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0]]
-                          :wrapping false
-                          :blorg 0
+                          :wrapping          false
+                          :blorg             0
+                          :tracking-dots (take 9 (repeat (make-tracking-dot)))
                           }))
 
 (defn dot [index dot-position]
@@ -71,7 +79,7 @@
                       :left (- (/ spacing-x 2))
                       :width dot-size
                       :height dot-size
-                      :background-color "#fff"
+                      :background-color "#000"
                       :display "flex"
                       :justify-content "center"
                       :alignItems "center"
@@ -102,6 +110,25 @@
   (set-wrapping-2 false)
   (println "mouse up"))
 
+(defn step-tracking-dot [{:keys [x y a] :as tracking-dot}]
+  (println (str "lehhhhhhh" tracking-dot))
+  {:x {:target (+ (:target x) 1)
+       :force (+ (:force x) 1)
+       :current (+ (:current x) 1)}
+   :y y
+   :a a}
+  )
+
+(defn assign-targets [{:keys [target-positions tracking-dots] :as state}]
+  (map-indexed
+    (fn [index tracking-dot]
+      (let [{:keys [x y a]} tracking-dot]
+        (println (get target-positions 1))
+        {:x (assoc x :target (get (get target-positions index) 0))
+         :y (assoc y :target (get (get target-positions index) 1))
+         :a (assoc a :target (get (get target-positions index) 2))}))
+    tracking-dots))
+
 (defn app []
   (let [{:keys [current-positions]} @app-state
         dot-divs (map-indexed dot current-positions)
@@ -111,8 +138,17 @@
                          :height           (.-innerHeight js/window)
                          :background-color "#ececec"}
            :onClick     (fn [e]
-
-                          (println (str "state: " @app-state)))
+                          (swap! app-state (fn [{:keys [tracking-dots] :as state}]
+                                             ;(println tracking-dots)
+                                             (-> state
+                                                 ;(assoc :tracking-dots (map step-tracking-dot tracking-dots))
+                                                 ;(assoc :tracking-dots (map step-tracking-dot tracking-dots))
+                                                 (assoc :tracking-dots (assign-targets state))
+                                                 )
+                                             ;state
+                                             ))
+                          (println (str "tdots: " (:tracking-dots @app-state)))
+                          )
            :onMouseDown on-mouse-down
            :onMouseUp   on-mouse-up
            }
@@ -126,10 +162,35 @@
 (r/render-component [app] (. js/document (getElementById "app")))
 
 
+(defn get-jitter-amount []
+  (* (- (rand) (rand)) 0.01))
+
+(defn jitter-position [[x y a :as position]]
+  (if (nil? position)
+    nil
+    [(+ x (get-jitter-amount)) (+ y (get-jitter-amount)) (+ a (get-jitter-amount))]
+    ))
+
+(defn move-num [n]
+  ; diff target - current
+  ; spring, friction
+  ;
+  (+ n 0.01)
+  )
+
+(defn move-position [[x y a :as position]]
+  (if (nil? position)
+    nil
+    [(move-num x) (move-num y) (move-num a)]
+    ))
+
+;(defn step-tracking-dot [td]
+;  (println "hello")
+;  )
 
 (defn move-step-index [amount-to-move]
   (swap! app-state
-         (fn [{:keys [step-index wrapping] :as state}]
+         (fn [{:keys [step-index wrapping tracking-dots] :as state}]
            (let [last-step-index (- (count step-sequence) 1)
                  new-step-index (+ step-index amount-to-move)
                  step-index-for-swap (cond
@@ -138,10 +199,15 @@
                                        :else new-step-index)
                  position-index (get step-sequence step-index-for-swap)
                  ]
+             ;(println tracking-dots)
+             (map step-tracking-dot tracking-dots)
              (-> state
                  (assoc :step-index step-index-for-swap)
                  (assoc :position-index position-index)
-                 (assoc :current-positions (map (fn [dot] (get dot position-index)) key-positions)))))))
+                 (assoc :target-positions (into [] (map (fn [dot] (get dot position-index)) key-positions)))
+                 (assoc :current-positions (map (fn [dot] (get dot position-index)) key-positions))
+                 ;(assoc :tracking-dots (map step-tracking-dot tracking-dots))
+                 )))))
 
 (defn toggle-running []
   (swap! app-state
@@ -166,31 +232,18 @@
       (println (str keyCode " is not recognized key")))))
 
 (defn add-listeners []
+
   (println "adding listeners")
   (set! (.-onkeydown js/document) on-key-down)
   ;(set! (.-onclick js/document) on-click)
   )
 
-(defn jitter-amount []
-  (* (- (rand) (rand)) 0.01))
-
-(defn jitter-position [[x y a :as position]]
-  ;(println position)
-  ;(if (= position nil)
-  ;  nil
-  ;  [(+ x (jitter-amount)) (+ y (jitter-amount)) (+ a (jitter-amount))])
-  (if-not (nil? position)
-    [(+ x (jitter-amount)) (+ y (jitter-amount)) (+ a (jitter-amount))]
-    position
-    )
-
-  )
-
 (defn step-world [app-state]
   ;(println "stepping world")
-  (swap! app-state (fn [{:keys [blorg current-positions] :as state}]
+  (swap! app-state (fn [{:keys [blorg target-positions current-positions] :as state}]
                      (-> state
-                         (assoc :current-positions (map jitter-position current-positions))
+                         (assoc :current-positions (map jitter-position target-positions))
+                         ;(assoc :current-positions (map jitter-position current-positions))
                          (assoc :blorg (inc blorg))
                          ))))
 
