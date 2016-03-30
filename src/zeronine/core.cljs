@@ -11,17 +11,16 @@
 
   )
 
-
 (enable-console-print!)
 
 (def spacing-x 100)
-(def spacing-y 90)
-(def dot-size 100)
+(def spacing-y 100)
+(def dot-size 80)
 
 (defn fps-to-millis [fps]
   (/ 1000 fps))
 
-(def time-loop-interval (fps-to-millis 20))
+(def time-loop-interval (fps-to-millis 30))
 
 ;                    0       1       2        3         4         5         6         7         8         9
 ;                    nil     solo    duo      triad     quad      pent      hex       sept      oct       non
@@ -91,7 +90,8 @@
                       :border-width 8
                       :border-color "rgba(0, 0, 0, 0.1)"
                       :border-radius dot-size
-                      :box-shadow "0px 5px 20px rgba(0, 0, 0, 0.03)"}
+                      ;:box-shadow "0px 20px 40px rgba(0, 0, 0, 0.2)"
+                      }
                :onClick (fn [e]
                           (.preventDefault e)
                           (.stopPropagation e)
@@ -122,8 +122,9 @@
 (defn assign-targets [{:keys [target-positions tracking-dots] :as state}]
   (map-indexed
     (fn [index tracking-dot]
-      (let [{:keys [x y a]} tracking-dot]
-        (println (get target-positions 1))
+      (let [{:keys [x y a]} tracking-dot
+            [tx ty ta] (get target-positions index)]
+        (println (str tx ty ta))
         {:x (assoc x :target (get (get target-positions index) 0))
          :y (assoc y :target (get (get target-positions index) 1))
          :a (assoc a :target (get (get target-positions index) 2))}))
@@ -136,18 +137,17 @@
     [:div {:style       {:position         "relative"
                          :width            (.-innerWidth js/window)
                          :height           (.-innerHeight js/window)
-                         :background-color "#ececec"}
+                         ;:background-color "#ececec"
+                         :background-color "#444"
+                         }
            :onClick     (fn [e]
-                          (swap! app-state (fn [{:keys [tracking-dots] :as state}]
-                                             ;(println tracking-dots)
+                          (swap! app-state (fn [state]
                                              (-> state
-                                                 ;(assoc :tracking-dots (map step-tracking-dot tracking-dots))
-                                                 ;(assoc :tracking-dots (map step-tracking-dot tracking-dots))
                                                  (assoc :tracking-dots (assign-targets state))
                                                  )
                                              ;state
                                              ))
-                          (println (str "tdots: " (:tracking-dots @app-state)))
+                          ;(println (str "tdots: " (:tracking-dots @app-state)))
                           )
            :onMouseDown on-mouse-down
            :onMouseUp   on-mouse-up
@@ -161,32 +161,25 @@
 
 (r/render-component [app] (. js/document (getElementById "app")))
 
+;(defn move-num [n]
+;  ; diff target - current
+;  ; spring, friction
+;  ;
+;  (+ n 0.01)
+;  )
 
-(defn get-jitter-amount []
-  (* (- (rand) (rand)) 0.01))
-
-(defn jitter-position [[x y a :as position]]
-  (if (nil? position)
-    nil
-    [(+ x (get-jitter-amount)) (+ y (get-jitter-amount)) (+ a (get-jitter-amount))]
-    ))
-
-(defn move-num [n]
-  ; diff target - current
-  ; spring, friction
-  ;
-  (+ n 0.01)
-  )
-
-(defn move-position [[x y a :as position]]
-  (if (nil? position)
-    nil
-    [(move-num x) (move-num y) (move-num a)]
-    ))
+;(defn move-position [[x y a :as position]]
+;  (if (nil? position)
+;    nil
+;    [(move-num x) (move-num y) (move-num a)]
+;    ))
 
 ;(defn step-tracking-dot [td]
 ;  (println "hello")
 ;  )
+
+(defn set-target-positions [{:keys [position-index] :as state}]
+  (assoc state :target-positions (into [] (map (fn [dot] (get dot position-index)) key-positions))))
 
 (defn move-step-index [amount-to-move]
   (swap! app-state
@@ -200,12 +193,13 @@
                  position-index (get step-sequence step-index-for-swap)
                  ]
              ;(println tracking-dots)
-             (map step-tracking-dot tracking-dots)
+             ;(map step-tracking-dot tracking-dots)
              (-> state
                  (assoc :step-index step-index-for-swap)
                  (assoc :position-index position-index)
-                 (assoc :target-positions (into [] (map (fn [dot] (get dot position-index)) key-positions)))
-                 (assoc :current-positions (map (fn [dot] (get dot position-index)) key-positions))
+                 ;(assoc :target-positions (into [] (map (fn [dot] (get dot position-index)) key-positions)))
+                 (set-target-positions)
+                 ;(assoc :current-positions (map (fn [dot] (get dot position-index)) key-positions))
                  ;(assoc :tracking-dots (map step-tracking-dot tracking-dots))
                  )))))
 
@@ -238,13 +232,39 @@
   ;(set! (.-onclick js/document) on-click)
   )
 
+(defn divide-to-val [cv tv divide-by]
+  (let [diff (- tv cv)
+        move (/ diff divide-by)]
+    (+ cv move)))
+
+(defn tween-current-positions [{:keys [target-positions current-positions] :as state}]
+  (assoc state :current-positions (into [] (map-indexed (fn [index [tx ty ta :as targ-pos]]
+                                                          (if (nil? targ-pos)
+                                                            nil
+                                                            (let [[cx cy ca :as cur-pos] (get current-positions index)]
+                                                              [(divide-to-val cx tx 2)
+                                                               (divide-to-val cy ty 2)
+                                                               (divide-to-val ca ta 2)]))) target-positions))))
+
+
+(defn get-jitter-amount []
+  (* (- (rand) (rand)) 0.01))
+
+(defn jitter-position [[x y a :as position]]
+  (if (nil? position)
+    nil
+    [(+ x (get-jitter-amount)) (+ y (get-jitter-amount)) (+ a (get-jitter-amount))]
+    ))
+
+(defn jitter-current-positions [{:keys [current-positions] :as state}]
+  (assoc state :current-positions (into [] (map jitter-position current-positions))))
+
 (defn step-world [app-state]
   ;(println "stepping world")
-  (swap! app-state (fn [{:keys [blorg target-positions current-positions] :as state}]
+  (swap! app-state (fn [{:keys [target-positions] :as state}]
                      (-> state
-                         (assoc :current-positions (map jitter-position target-positions))
-                         ;(assoc :current-positions (map jitter-position current-positions))
-                         (assoc :blorg (inc blorg))
+                         (tween-current-positions)
+                         (jitter-current-positions)
                          ))))
 
 (defn time-loop []
