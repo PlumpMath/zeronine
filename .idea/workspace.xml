@@ -58,8 +58,8 @@
       <file leaf-file-name="core.cljs" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/zeronine/core.cljs">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.12942366">
-              <caret line="254" column="27" selection-start-line="254" selection-start-column="27" selection-end-line="254" selection-end-column="27" />
+            <state vertical-scroll-proportion="0.42467138">
+              <caret line="156" column="25" selection-start-line="156" selection-start-column="25" selection-end-line="156" selection-end-column="25" />
               <folding />
             </state>
           </provider>
@@ -198,7 +198,7 @@
     <property name="settings.editor.selected.configurable" value="Keybindings" />
     <property name="settings.editor.splitter.proportion" value="0.2" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$/../prongus" />
-    <property name="SearchEverywhereHistoryKey" value="format&#9;ACTION&#9;ReformatCode&#10;select&#9;ACTION&#9;SelectAllOccurrences&#10;next&#9;ACTION&#9;SelectNextOccurrence" />
+    <property name="SearchEverywhereHistoryKey" value="back&#9;ACTION&#9;Back&#10;format&#9;ACTION&#9;ReformatCode&#10;select&#9;ACTION&#9;SelectAllOccurrences&#10;next&#9;ACTION&#9;SelectNextOccurrence" />
   </component>
   <component name="RunManager" selected="Clojure REPL.FIGWHEEL">
     <configuration default="true" type="#org.jetbrains.idea.devkit.run.PluginConfigurationType" factoryName="Plugin">
@@ -508,8 +508,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/zeronine/core.cljs">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.12942366">
-          <caret line="254" column="27" selection-start-line="254" selection-start-column="27" selection-end-line="254" selection-end-column="27" />
+        <state vertical-scroll-proportion="0.42467138">
+          <caret line="156" column="25" selection-start-line="156" selection-start-column="25" selection-end-line="156" selection-end-column="25" />
           <folding />
         </state>
       </provider>

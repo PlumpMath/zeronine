@@ -21,6 +21,7 @@
   (/ 1000 fps))
 
 (def time-loop-interval (fps-to-millis 60))
+(def playhead-loop-interval (fps-to-millis 3))
 
 ;                    0       1       2        3         4         5         6         7         8         9
 ;                    nil     solo    duo      triad     quad      pent      hex       sept      oct       non
@@ -34,8 +35,18 @@
                     [nil     nil     nil      nil       nil       nil       nil       [0 1 0]   [-1 1 1]  [-1 1 1]]
                     [nil     nil     nil      nil       nil       nil       nil       nil       [-1 1 0]   [0 0 1]]])
 
-(def step-sequence  [0 1 2 3 4 5 6 7 8 9])
+;(def step-sequence  [0 1 2 3 4 5 6 7 8 9])
 ;(def step-sequence  [0 1 2 3 4 5 6 7 8 9 8 7 6 5 4 3 2 1])
+(def step-sequence  [0 1 2 3 4 5 6 7 8 9 8 7 6 5 4 3 2 1
+                     0 1 2 3 4 5 6 7 8 7 6 5 4 3 2 1
+                     0 1 2 3 4 5 6 7 6 5 4 3 2 1
+                     0 1 2 3 4 5 6 5 4 3 2 1
+                     0 1 2 3 4 5 4 3 2 1
+                     0 1 2 3 4 3 2 1
+                     0 1 2 3 2 1
+                     0 1 2 1
+                     0 1
+                     0])
 
 
 
@@ -57,7 +68,7 @@
                           :target-positions  [nil nil nil nil nil nil nil nil nil]
                           :current-positions [nil nil nil nil nil nil nil nil nil]
                           :forces            [[0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0]]
-                          :wrapping          false
+                          :wrapping          true
                           :blorg             0
                           :tracking-dots     (take 9 (repeat (make-tracking-dot)))
                           }))
@@ -144,15 +155,6 @@
                          ;:background-color "#ececec"
                          :background-color "#444"
                          }
-           :onClick     (fn [e]
-                          (swap! app-state (fn [state]
-                                             (-> state
-                                                 (assoc :tracking-dots (assign-targets state))
-                                                 )
-                                             ;state
-                                             ))
-                          ;(println (str "tdots: " (:tracking-dots @app-state)))
-                          )
            :onMouseDown on-mouse-down
            :onMouseUp   on-mouse-up
            }
@@ -342,11 +344,25 @@
       )
     (time-loop)))
 
+
+
+(defn playhead-loop []
+  (go
+    (<! (timeout playhead-loop-interval))
+    (when (:running @app-state)
+      ;(move-step-index 1)
+      ;(step-world app-state)
+      (move-step-index 1)
+      )
+    (playhead-loop)))
+
 (defonce init
          (do
            (println "kickoff!")
            (add-listeners)
-           (time-loop)))
+           (time-loop)
+           (playhead-loop)
+           ))
 
 (defn on-js-reload []
   ;;; (println "reload")
