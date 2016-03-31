@@ -42,7 +42,7 @@
 
 (defn make-trackable []
   {:target  0
-   :force   0
+   :forces  0
    :current 0})
 
 (defn make-tracking-dot []
@@ -56,10 +56,10 @@
                           :running           true
                           :target-positions  [nil nil nil nil nil nil nil nil nil]
                           :current-positions [nil nil nil nil nil nil nil nil nil]
-                          :force             [[0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0]]
+                          :forces            [[0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0]]
                           :wrapping          false
                           :blorg             0
-                          :tracking-dots (take 9 (repeat (make-tracking-dot)))
+                          :tracking-dots     (take 9 (repeat (make-tracking-dot)))
                           }))
 
 (defn dot [index dot-position]
@@ -103,17 +103,20 @@
                      (assoc state :wrapping is-wrapping))))
 
 (defn on-mouse-down [e]
-  (set-wrapping-2 true)
-  (println "mouse down"))
+  (let [{:keys [forces] :as state} @app-state]
+    ;(set-wrapping-2 true)
+    (println (str "forces: " forces))
+    (println "mouse down")
+    ))
 
 (defn on-mouse-up [e]
-  (set-wrapping-2 false)
+  ;(set-wrapping-2 false)
   (println "mouse up"))
 
 (defn step-tracking-dot [{:keys [x y a] :as tracking-dot}]
   (println (str "lehhhhhhh" tracking-dot))
-  {:x {:target (+ (:target x) 1)
-       :force (+ (:force x) 1)
+  {:x {:target  (+ (:target x) 1)
+       :forces  (+ (:forces x) 1)
        :current (+ (:current x) 1)}
    :y y
    :a a}
@@ -237,7 +240,7 @@
         move (/ diff divide-by)]
     (+ cv move)))
 
-(defn tween-current-positions [{:keys [target-positions current-positions] :as state}]
+(defn divide-tween-current-positions [{:keys [target-positions current-positions] :as state}]
   (assoc state :current-positions (into [] (map-indexed (fn [index [tx ty ta :as targ-pos]]
                                                           (if (nil? targ-pos)
                                                             nil
@@ -259,11 +262,63 @@
 (defn jitter-current-positions [{:keys [current-positions] :as state}]
   (assoc state :current-positions (into [] (map jitter-position current-positions))))
 
+(defn force-tween-val [current-val target-val force]
+  (let [diff (- target-val current-val)]
+    ;(println (str "force tweening val diff: " diff))
+    target-val))
+
+(defn force-tween-current-pos [current-pos target-pos force]
+  [
+   (force-tween-val (get current-pos 0) (get target-pos 0) (get force 0))
+   (force-tween-val (get current-pos 1) (get target-pos 1) (get force 1))
+   (force-tween-val (get current-pos 2) (get target-pos 2) (get force 2))
+   ])
+
+(defn apply-force [force cval tval]
+  (let [diff (- tval cval)
+        new-force (+ force (* diff 0.11))                   ; spring
+        new-force (* new-force 0.7)]                        ;friction
+    ;(println (str "applying force: " force cval tval))
+    new-force))
+
+(defn force-tween-current-positions [{:keys [target-positions current-positions forces] :as state}]
+  ;(println (str "updating force: " current-positions ))
+  (-> state
+      (assoc :forces (into [] (map-indexed
+                                (fn [index force]
+                                  (let [cp (get current-positions index)
+                                        tp (get target-positions index)]
+                                    [
+                                     (apply-force (get force 0) (get cp 0) (get tp 0))
+                                     (apply-force (get force 1) (get cp 1) (get tp 1))
+                                     (apply-force (get force 2) (get cp 2) (get tp 2))
+                                     ])
+                                  )
+                                forces)))
+      (assoc :current-positions
+             (into []
+                   (map-indexed (fn [index current-pos]
+                                  (let [target-pos (get target-positions index)
+                                        force (get forces index)]
+                                    ;(force-tween-current-pos current-pos target-pos force)
+                                    [
+                                     (+ (get current-pos 0) (get force 0))
+                                     (+ (get current-pos 1) (get force 1))
+                                     (+ (get current-pos 2) (get force 2))
+                                     ]
+                                    ))
+                                current-positions)))
+
+
+
+      ))
+
 (defn step-world [app-state]
   ;(println "stepping world")
   (swap! app-state (fn [{:keys [target-positions] :as state}]
                      (-> state
-                         (tween-current-positions)
+                         (force-tween-current-positions)
+                         ;(divide-tween-current-positions)
                          (jitter-current-positions)
                          ))))
 
