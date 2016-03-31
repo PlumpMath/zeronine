@@ -20,7 +20,7 @@
 (defn fps-to-millis [fps]
   (/ 1000 fps))
 
-(def time-loop-interval (fps-to-millis 30))
+(def time-loop-interval (fps-to-millis 60))
 
 ;                    0       1       2        3         4         5         6         7         8         9
 ;                    nil     solo    duo      triad     quad      pent      hex       sept      oct       non
@@ -28,11 +28,11 @@
                     [nil     [0 0 0] [1 0 1]  [1 -1 1]  [1 -1 1]  [1 -1 1]  [2 -2 1]  [2 -2 1]  [2 -2 1]  [2 -2 1]]
                     [nil     nil     [1 0 0]  [0 1 1]   [1 1 1]   [1 1 1]   [2 2 1]   [2 2 1]   [2 2 1]   [2 2 1]]
                     [nil     nil     nil      [0 1 0]   [-1 1 1]  [-1 1 1]  [-2 2 1]  [-2 2 1]  [-2 2 1]  [-2 2 1]]
-                    [nil     nil     nil      nil       [0 0 0]   [0 0 1]   [-1 0 1]  [-1 -1 1] [-1 -1 1] [-1 -1 1]]
+                    [nil     nil     nil      nil       [-1 1 0]   [0 0 1]   [-1 0 1]  [-1 -1 1] [-1 -1 1] [-1 -1 1]]
                     [nil     nil     nil      nil       nil       [0 0 0]   [1 0 1]   [1 -1 1]  [1 -1 1]  [1 -1 1]]
                     [nil     nil     nil      nil       nil       nil       [1 0 0]   [0 1 1]   [1 1 1]   [1 1 1]]
                     [nil     nil     nil      nil       nil       nil       nil       [0 1 0]   [-1 1 1]  [-1 1 1]]
-                    [nil     nil     nil      nil       nil       nil       nil       nil       [0 0 0]   [0 0 1]]])
+                    [nil     nil     nil      nil       nil       nil       nil       nil       [-1 1 0]   [0 0 1]]])
 
 (def step-sequence  [0 1 2 3 4 5 6 7 8 9])
 ;(def step-sequence  [0 1 2 3 4 5 6 7 8 9 8 7 6 5 4 3 2 1])
@@ -103,9 +103,10 @@
                      (assoc state :wrapping is-wrapping))))
 
 (defn on-mouse-down [e]
-  (let [{:keys [forces] :as state} @app-state]
+  (let [{:keys [forces current-positions] :as state} @app-state]
     ;(set-wrapping-2 true)
-    (println (str "forces: " forces))
+    ;(println (str "forces: " forces))
+    (println (str "current-positions: " current-positions))
     (println "mouse down")
     ))
 
@@ -240,18 +241,18 @@
         move (/ diff divide-by)]
     (+ cv move)))
 
-(defn divide-tween-current-positions [{:keys [target-positions current-positions] :as state}]
-  (assoc state :current-positions (into [] (map-indexed (fn [index [tx ty ta :as targ-pos]]
-                                                          (if (nil? targ-pos)
-                                                            nil
-                                                            (let [[cx cy ca :as cur-pos] (get current-positions index)]
-                                                              [(divide-to-val cx tx 2)
-                                                               (divide-to-val cy ty 2)
-                                                               (divide-to-val ca ta 2)]))) target-positions))))
+;(defn divide-tween-current-positions [{:keys [target-positions current-positions] :as state}]
+;  (assoc state :current-positions (into [] (map-indexed (fn [index [tx ty ta :as targ-pos]]
+;                                                          (if (nil? targ-pos)
+;                                                            nil
+;                                                            (let [[cx cy ca :as cur-pos] (get current-positions index)]
+;                                                              [(divide-to-val cx tx 2)
+;                                                               (divide-to-val cy ty 2)
+;                                                               (divide-to-val ca ta 2)]))) target-positions))))
 
 
 (defn get-jitter-amount []
-  (* (- (rand) (rand)) 0.01))
+  (* (- (rand) (rand)) 0.02))
 
 (defn jitter-position [[x y a :as position]]
   (if (nil? position)
@@ -267,57 +268,66 @@
     ;(println (str "force tweening val diff: " diff))
     target-val))
 
-(defn force-tween-current-pos [current-pos target-pos force]
-  [
-   (force-tween-val (get current-pos 0) (get target-pos 0) (get force 0))
-   (force-tween-val (get current-pos 1) (get target-pos 1) (get force 1))
-   (force-tween-val (get current-pos 2) (get target-pos 2) (get force 2))
-   ])
+;(defn force-tween-current-pos [current-pos target-pos force]
+;  [
+;   (force-tween-val (get current-pos 0) (get target-pos 0) (get force 0))
+;   (force-tween-val (get current-pos 1) (get target-pos 1) (get force 1))
+;   (force-tween-val (get current-pos 2) (get target-pos 2) (get force 2))
+;   ])
 
 (defn apply-force [force cval tval]
   (let [diff (- tval cval)
-        new-force (+ force (* diff 0.11))                   ; spring
-        new-force (* new-force 0.7)]                        ;friction
+        new-force (+ force (* diff 0.1))                   ; spring
+        new-force (* new-force 0.8)]                        ;friction
     ;(println (str "applying force: " force cval tval))
     new-force))
 
-(defn force-tween-current-positions [{:keys [target-positions current-positions forces] :as state}]
-  ;(println (str "updating force: " current-positions ))
+(defn update-forces-before-apply [{:keys [target-positions current-positions forces] :as state}]
   (-> state
-      (assoc :forces (into [] (map-indexed
-                                (fn [index force]
-                                  (let [cp (get current-positions index)
-                                        tp (get target-positions index)]
-                                    [
-                                     (apply-force (get force 0) (get cp 0) (get tp 0))
-                                     (apply-force (get force 1) (get cp 1) (get tp 1))
-                                     (apply-force (get force 2) (get cp 2) (get tp 2))
-                                     ])
-                                  )
-                                forces)))
+      (assoc :forces
+             (into []
+                   (map-indexed
+                     (fn [index force]
+                       (let [cp (get current-positions index)
+                             tp (get target-positions index)]
+                         [(apply-force (get force 0) (get cp 0) (get tp 0))
+                          (apply-force (get force 1) (get cp 1) (get tp 1))
+                          (apply-force (get force 2) (get cp 2) (get tp 2))]))
+                     forces)))))
+
+(defn apply-forces [{:keys [current-positions forces] :as state}]
+  (-> state
       (assoc :current-positions
              (into []
-                   (map-indexed (fn [index current-pos]
-                                  (let [target-pos (get target-positions index)
-                                        force (get forces index)]
-                                    ;(force-tween-current-pos current-pos target-pos force)
-                                    [
-                                     (+ (get current-pos 0) (get force 0))
-                                     (+ (get current-pos 1) (get force 1))
-                                     (+ (get current-pos 2) (get force 2))
-                                     ]
-                                    ))
-                                current-positions)))
+                   (map-indexed
+                     (fn [index current-pos]
+                       (let [force (get forces index)]
+                         [(+ (get current-pos 0) (get force 0))
+                          (+ (get current-pos 1) (get force 1))
+                          (+ (get current-pos 2) (get force 2))]))
+                     current-positions)))))
 
+(defn update-forces-after-apply [{:keys [forces] :as state}]
+  (-> state
+      (assoc :forces
+             (into []
+                   (map
+                     (fn [force]
+                       (let [drag 0.98]
+                         [(* (get force 0) drag)
+                          (* (get force 1) drag)
+                          (* (get force 2) drag)]))
+                     forces)))))
 
-
-      ))
 
 (defn step-world [app-state]
   ;(println "stepping world")
   (swap! app-state (fn [{:keys [target-positions] :as state}]
                      (-> state
-                         (force-tween-current-positions)
+                         ;(force-tween-current-positions)
+                         (update-forces-before-apply)
+                         (apply-forces)
+                         (update-forces-after-apply)
                          ;(divide-tween-current-positions)
                          (jitter-current-positions)
                          ))))
