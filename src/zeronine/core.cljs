@@ -21,7 +21,7 @@
   (/ 1000 fps))
 
 (def time-loop-interval (fps-to-millis 60))
-(def playhead-loop-interval (fps-to-millis 3))
+(def playhead-loop-interval (fps-to-millis 2))
 
 ;                    0       1       2        3         4         5         6         7         8         9
 ;                    nil     solo    duo      triad     quad      pent      hex       sept      oct       non
@@ -37,7 +37,27 @@
 
 ;(def step-sequence  [0 1 2 3 4 5 6 7 8 9])
 ;(def step-sequence  [0 1 2 3 4 5 6 7 8 9 8 7 6 5 4 3 2 1])
-(def step-sequence  [0 1 2 3 4 5 6 7 8 9 8 7 6 5 4 3 2 1
+;(def step-sequence  [0 1 2 3 4 5 6 7 8 9 8 7 6 5 4 3 2 1
+;                     0 1 2 3 4 5 6 7 8 7 6 5 4 3 2 1
+;                     0 1 2 3 4 5 6 7 6 5 4 3 2 1
+;                     0 1 2 3 4 5 6 5 4 3 2 1
+;                     0 1 2 3 4 5 4 3 2 1
+;                     0 1 2 3 4 3 2 1
+;                     0 1 2 3 2 1
+;                     0 1 2 1
+;                     0 1
+;                     0])
+(def step-sequence  [
+                     0
+                     0 1
+                     0 1 2 1
+                     0 1 2 3 2 1
+                     0 1 2 3 4 3 2 1
+                     0 1 2 3 4 5 4 3 2 1
+                     0 1 2 3 4 5 6 5 4 3 2 1
+                     0 1 2 3 4 5 6 7 6 5 4 3 2 1
+                     0 1 2 3 4 5 6 7 8 7 6 5 4 3 2 1
+                     0 1 2 3 4 5 6 7 8 9 8 7 6 5 4 3 2 1
                      0 1 2 3 4 5 6 7 8 7 6 5 4 3 2 1
                      0 1 2 3 4 5 6 7 6 5 4 3 2 1
                      0 1 2 3 4 5 6 5 4 3 2 1
@@ -65,12 +85,10 @@
 
 (defonce app-state (atom {:step-index        0
                           :running           true
+                          :wrapping          true
                           :target-positions  [nil nil nil nil nil nil nil nil nil]
                           :current-positions [nil nil nil nil nil nil nil nil nil]
                           :forces            [[0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0] [0 0 0]]
-                          :wrapping          true
-                          :blorg             0
-                          :tracking-dots     (take 9 (repeat (make-tracking-dot)))
                           }))
 
 (defn dot [index dot-position]
@@ -101,7 +119,7 @@
                       :border-width 8
                       :border-color "rgba(0, 0, 0, 0.1)"
                       :border-radius dot-size
-                      ;:box-shadow "0px 20px 40px rgba(0, 0, 0, 0.2)"
+                      :box-shadow "0px 20px 40px rgba(0, 0, 0, 0.2)"
                       }
                :onClick (fn [e]
                           (.preventDefault e)
@@ -259,7 +277,11 @@
 (defn jitter-position [[x y a :as position]]
   (if (nil? position)
     nil
-    [(+ x (get-jitter-amount)) (+ y (get-jitter-amount)) (+ a (get-jitter-amount))]
+    [(+ x (get-jitter-amount))
+     (+ y (get-jitter-amount))
+     ;(+ a (get-jitter-amount))
+     a
+     ]
     ))
 
 (defn jitter-current-positions [{:keys [current-positions] :as state}]

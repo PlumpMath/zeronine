@@ -3,7 +3,6 @@
   <component name="ChangeListManager">
     <list default="true" id="8bc9473d-0978-4099-a3f6-33f8d3a1b4ee" name="Default" comment="">
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/replstate.xml" afterPath="$PROJECT_DIR$/.idea/replstate.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/zeronine/core.cljs" afterPath="$PROJECT_DIR$/src/zeronine/core.cljs" />
     </list>
     <ignored path="zeronine.iws" />
@@ -58,8 +57,8 @@
       <file leaf-file-name="core.cljs" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/zeronine/core.cljs">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.42467138">
-              <caret line="156" column="25" selection-start-line="156" selection-start-column="25" selection-end-line="156" selection-end-column="25" />
+            <state vertical-scroll-proportion="0.2760364">
+              <caret line="162" column="69" selection-start-line="162" selection-start-column="69" selection-end-line="162" selection-end-column="69" />
               <folding />
             </state>
           </provider>
@@ -508,8 +507,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/zeronine/core.cljs">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.42467138">
-          <caret line="156" column="25" selection-start-line="156" selection-start-column="25" selection-end-line="156" selection-end-column="25" />
+        <state vertical-scroll-proportion="0.2760364">
+          <caret line="162" column="69" selection-start-line="162" selection-start-column="69" selection-end-line="162" selection-end-column="69" />
           <folding />
         </state>
       </provider>
