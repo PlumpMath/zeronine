@@ -14,14 +14,14 @@
 (enable-console-print!)
 
 (def spacing-x 100)
-(def spacing-y 100)
+(def spacing-y 90)
 (def dot-size 80)
 
 (defn fps-to-millis [fps]
   (/ 1000 fps))
 
-(def time-loop-interval (fps-to-millis 60))
-(def playhead-loop-interval (fps-to-millis 2))
+(def time-loop-interval (fps-to-millis 100))
+(def playhead-loop-interval (fps-to-millis 0.2))
 
 ;                    0       1       2        3         4         5         6         7         8         9
 ;                    nil     solo    duo      triad     quad      pent      hex       sept      oct       non
@@ -66,7 +66,7 @@
                      0 1 2 3 2 1
                      0 1 2 1
                      0 1
-                     0])
+                     ])
 
 
 
@@ -301,7 +301,7 @@
 
 (defn apply-force [force cval tval]
   (let [diff (- tval cval)
-        new-force (+ force (* diff 0.1))                   ; spring
+        new-force (+ force (* diff 0.04))                   ; spring
         new-force (* new-force 0.8)]                        ;friction
     ;(println (str "applying force: " force cval tval))
     new-force))
