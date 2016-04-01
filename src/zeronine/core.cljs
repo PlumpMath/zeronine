@@ -13,6 +13,10 @@
 
 (enable-console-print!)
 
+; should all these defs at the top just be part of the app-state atom?
+; feels the same as the 'curse of var' from js:
+; unportable config/state just hanging out at the top
+
 (def spacing-x 140)
 (def spacing-y 120)
 (def dot-size 100)
@@ -20,7 +24,7 @@
 (defn fps-to-millis [fps]
   (/ 1000 fps))
 
-(def time-loop-interval (fps-to-millis 100))
+(def tick-loop-interval (fps-to-millis 100))
 (def playhead-loop-interval (fps-to-millis 1.435))
 
 ;                    0       1       2        3         4         5         6         7         8         9
@@ -68,21 +72,6 @@
                      0 1
                      ])
 
-
-
-
-(defn make-trackable []
-  {:target  0
-   :forces  0
-   :current 0})
-
-(defn make-tracking-dot []
-  (assoc {} :x (make-trackable)
-            :y (make-trackable)
-            :a (make-trackable)))
-
-
-
 (defonce app-state (atom {:step-index        0
                           :running           true
                           :wrapping          true
@@ -98,29 +87,7 @@
 
 
 
-
-
-
-
-(defn on-mouse-down [e]
-  (let [{:keys [forces current-positions] :as state} @app-state]
-    ;(set-wrapping-2 true)
-    ;(println (str "forces: " forces))
-    (println (str "current-positions: " current-positions))
-    (println "mouse down")
-    ))
-
-(defn on-mouse-up [e]
-  ;(set-wrapping-2 false)
-  (println "mouse up"))
-
-
-
-
-
-
-(defn set-target-positions [{:keys [position-index] :as state}]
-  (assoc state :target-positions (into [] (map (fn [dot] (get dot position-index)) key-positions))))
+; ACTIONS
 
 (defn move-step-index [amount-to-move]
   (swap! app-state
@@ -135,13 +102,26 @@
              (-> state
                  (assoc :step-index step-index-for-swap)
                  (assoc :position-index position-index)
-                 (set-target-positions))))))
+                 (assoc :target-positions
+                        (into []
+                              (map (fn [dot] (get dot position-index)) key-positions))))))))
 
 (defn toggle-running []
   (swap! app-state
          (fn [state]
            (-> state
                (assoc :running (not (:running state)))))))
+
+; CTRL
+
+(defn on-mouse-down [e]
+  (let [{:keys [current-positions] :as state} @app-state]
+    (println (str "current-positions: " current-positions))
+    (println "mouse down")
+    ))
+
+(defn on-mouse-up [e]
+  (println "mouse up"))
 
 (defn on-key-down [e]
   (let [keyCode (.-keyCode e)]
@@ -156,6 +136,16 @@
 
 
 
+
+
+
+
+
+
+
+
+
+; VIEW COMPONENTS
 
 (defn dot [index dot-position]
   (let [[x y a] dot-position]
@@ -173,10 +163,10 @@
                         :left             (- (/ spacing-x 2))
                         :width            dot-size
                         :height           dot-size
-                        ;:background-color "#111"
-                        :background-color (if (= (mod index 2) 0)
-                                            "#ccc"
-                                            "#111")
+                        :background-color "#ccc"
+                        ;:background-color (if (= (mod index 2) 0)
+                        ;                    "#ccc"
+                        ;                    "#111")
                         :display          "flex"
                         :justify-content  "center"
                         :alignItems       "center"
@@ -224,25 +214,8 @@
 
 
 
-(defn add-listeners []
-  (println "adding listeners")
-  (set! (.-onkeydown js/document) on-key-down))
 
-(defn get-jitter-amount []
-  (* (- (rand) (rand)) 0.005))
-
-(defn jitter-position [[x y a :as position]]
-  (if (nil? position)
-    nil
-    [(+ x (get-jitter-amount))
-     (+ y (get-jitter-amount))
-     ;(+ a (get-jitter-amount))
-     a
-     ]
-    ))
-
-(defn jitter-current-positions [{:keys [current-positions] :as state}]
-  (assoc state :current-positions (into [] (map jitter-position current-positions))))
+; TICK LOGIC
 
 (defn apply-force [force cval tval]
   (let [diff (- tval cval)
@@ -250,9 +223,8 @@
         friction 0.95
         spring 0.1
         friction 0.8
-        new-force (+ force (* diff spring))                   ; spring
-        new-force (* new-force friction)]                        ;friction
-    ;(println (str "applying force: " force cval tval))
+        new-force (+ force (* diff spring))                 ; spring
+        new-force (* new-force friction)]                   ;friction
     new-force))
 
 (defn update-forces-before-apply [{:keys [target-positions current-positions forces] :as state}]
@@ -292,25 +264,60 @@
                           (* (get force 2) drag)]))
                      forces)))))
 
+(defn get-jitter-amount []
+  (* (- (rand) (rand)) 0.005))
+
+(defn jitter-position [[x y a :as position]]
+  (if (nil? position)
+    nil
+    [(+ x (get-jitter-amount))
+     (+ y (get-jitter-amount))
+     a]))
+
+(defn jitter-current-positions [{:keys [current-positions] :as state}]
+  (assoc state :current-positions (into [] (map jitter-position current-positions))))
+
+(defn nil-clamp-on-alpha [{:keys [current-positions] :as state}]
+  (-> state
+      (assoc :current-positions
+             (into []
+                   (map
+                     (fn [[_ _ a :as cp]]
+                       ;(println (str "a: " a))
+                       (if (<= a 0)
+                         nil
+                         cp))
+                     current-positions)))))
 
 (defn step-world [app-state]
   ;(println "stepping world")
-  (swap! app-state (fn [state]
-                     (-> state
-                         ;(force-tween-current-positions)
-                         (update-forces-before-apply)
-                         (apply-forces)
-                         (update-forces-after-apply)
-                         ;(divide-tween-current-positions)
-                         (jitter-current-positions)
-                         ))))
+  (swap! app-state
+         (fn [state]
+           (-> state
+               ; this could be rolled into `(force-tween-dots)`
+               (update-forces-before-apply)
+               (apply-forces)
+               (update-forces-after-apply)
+               ;
 
-(defn time-loop []
+               (jitter-current-positions)
+               (nil-clamp-on-alpha)))))
+
+
+
+
+
+
+
+
+; INITIAL ONE-TIME SETUP
+
+(defn tick-loop []
   (go
-    (<! (timeout time-loop-interval))
+    (<! (timeout tick-loop-interval))
     (when (:running @app-state)
       (step-world app-state))
-    (time-loop)))
+    (tick-loop)))
 
 (defn playhead-loop []
   (go
@@ -319,32 +326,31 @@
       (move-step-index 1))
     (playhead-loop)))
 
+(defn add-global-key-listeners []
+  (set! (.-onkeydown js/document) on-key-down))
+
 (defonce init
          (do
            (println "kickoff!")
-           (add-listeners)
-           (time-loop)
+           (add-global-key-listeners)
+           (tick-loop)
            (playhead-loop)))
+
+
+
+
+
+
+
+
+
+
+; ON FIGWHEEL RELOAD
 
 (defn on-js-reload []
   ;;; (println "reload")
   ;;; optionally touch your app-state to force rerendering depending on
   ;;; your application
   ;;; (swap! app-state update-in [:__figwheel_counter] inc)
-  (add-listeners)
+  (add-global-key-listeners)
 )
-
-(comment
-
-  :step-sequence [0 1 2 3 4 5 6 7 8 9 8 7 6 5 4 3 2 1
-                  0 1 2 3 4 5 6 7 8 7 6 5 4 3 2 1
-                  0 1 2 3 4 5 6 7 6 5 4 3 2 1
-                  0 1 2 3 4 5 6 5 4 3 2 1
-                  0 1 2 3 4 5 4 3 2 1
-                  0 1 2 3 4 3 2 1
-                  0 1 2 3 2 1
-                  0 1 2 1
-                  0 1
-                  0]
-
-  )
